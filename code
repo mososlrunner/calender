@@ -1,0 +1,102 @@
+# calender
+import streamlit as st
+import os
+
+# OpenAI API 키 입력받기
+openai_api_key = st.text_input("OpenAI API 키를 입력하세요:", type="password")
+
+if openai_api_key:
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+    st.success("API 키가 성공적으로 설정되었습니다.")
+else:
+    st.warning("API 키를 입력해주세요.")
+import pandas as pd
+
+# 기본 일정 데이터프레임
+events_df = pd.DataFrame(columns=["Date", "Time", "Event", "Priority"])
+
+# 일정 추가 기능
+def add_event(date, time, event, priority):
+    new_event = {
+        "Date": date,
+        "Time": time,
+        "Event": event,
+        "Priority": priority
+    }
+    events_df = events_df.append(new_event, ignore_index=True)
+    return events_df
+
+# 우선순위 기준으로 자동 정렬
+def prioritize_schedule():
+    return events_df.sort_values(by=["Priority"], ascending=[False])
+
+# 예시로 일정 추가
+events_df = add_event("2024-12-03", "10:00", "회의 준비", 1)
+events_df = add_event("2024-12-03", "14:00", "일정 확인", 3)
+
+# 일정 우선순위 정렬
+sorted_events = prioritize_schedule()
+st.dataframe(sorted_events)
+
+import speech_recognition as sr
+import pyttsx3
+
+# 음성 인식 초기화
+recognizer = sr.Recognizer()
+engine = pyttsx3.init()
+
+def listen_for_event():
+    with sr.Microphone() as source:
+        print("음성으로 일정을 입력하세요...")
+        audio = recognizer.listen(source)
+
+    try:
+        event = recognizer.recognize_google(audio, language="ko-KR")
+        print(f"인식된 음성: {event}")
+        return event
+    except sr.UnknownValueError:
+        print("음성을 인식할 수 없습니다.")
+        return None
+
+# 음성 알림
+def voice_reminder(message):
+    engine.say(message)
+    engine.runAndWait()
+
+# 예시
+event = listen_for_event()
+if event:
+    voice_reminder(f"일정이 추가되었습니다: {event}")
+
+import openai
+
+# OpenAI GPT 모델로 일정 분석 요청
+def analyze_schedule(schedule_text):
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    response = openai.Completion.create(
+        model="gpt-3.5-turbo",
+        prompt=f"다음 일정을 분석하여 비효율적인 부분과 개선 방법을 제시하세요: {schedule_text}",
+        temperature=0.7,
+        max_tokens=150
+    )
+    return response.choices[0].text.strip()
+
+# 예시 일정 분석
+schedule_text = "10:00 회의 준비, 14:00 일정 확인, 15:00 중요한 프로젝트 작업"
+analysis_result = analyze_schedule(schedule_text)
+st.write(f"AI 분석 결과: {analysis_result}")
+
+# 일정 데이터를 주간/월간 단위로 필터링하여 분석
+def generate_report(df, period='weekly'):
+    # 기간별로 데이터를 그룹화하고 보고서 생성
+    if period == 'weekly':
+        df['Week'] = pd.to_datetime(df['Date']).dt.isocalendar().week
+        report = df.groupby('Week').size()
+    elif period == 'monthly':
+        df['Month'] = pd.to_datetime(df['Date']).dt.month
+        report = df.groupby('Month').size()
+    return report
+
+# 예시: 주간 보고서 생성
+weekly_report = generate_report(events_df, 'weekly')
+st.write("주간 보고서:", weekly_report)
