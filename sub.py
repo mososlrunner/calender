@@ -9,6 +9,21 @@ from googletrans import Translator
 from pydub import AudioSegment
 from pydub.playback import play
 
+ pip install openai==0.28
+# Step 1: Install ffmpeg (needed by pydub)
+sudo apt-get install ffmpeg
+
+# Step 2: Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Step 3: Install required Python dependencies
+pip install streamlit openai googletrans gtts pydub
+
+# Step 4: Run the Streamlit app
+streamlit run sub.py
+
+
 # Set default language to Korean
 st.set_page_config(page_title="일정 관리 앱", page_icon="🗓️", layout="centered")
 
