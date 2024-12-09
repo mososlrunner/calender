@@ -9,7 +9,7 @@ from googletrans import Translator
 from pydub import AudioSegment
 from pydub.playback import play
 
- pip install openai==0.28
+pip install openai==0.28
 # Step 1: Install ffmpeg (needed by pydub)
 sudo apt-get install ffmpeg
 
