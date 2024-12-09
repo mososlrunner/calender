@@ -3,10 +3,8 @@ import openai
 import datetime
 import pandas as pd
 import random
-import json
 from gtts import gTTS
 import os
-import time
 from googletrans import Translator
 from pydub import AudioSegment
 from pydub.playback import play
@@ -35,14 +33,17 @@ def text_to_speech(text, lang='ko'):
 def ai_schedule_analysis(user_schedule):
     try:
         prompt = f"다음 일정을 분석하고 개선하거나 최적화할 방법을 제시하세요:\n{user_schedule}"
+
+        # Use gpt-3.5-turbo model for chat completion
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", 
-            messages=[
+            model="gpt-3.5-turbo",  # Use gpt-3.5-turbo for chat-based models
+            messages=[ 
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=1000
         )
+
         analysis = response['choices'][0]['message']['content'].strip()
         return analysis
     except Exception as e:
@@ -53,23 +54,26 @@ def ai_schedule_analysis(user_schedule):
 def ai_generate_report(schedule):
     try:
         prompt = f"다음 일정을 기반으로 주간 또는 월간 보고서를 작성하세요:\n{schedule}"
+
+        # Use gpt-3.5-turbo model for chat completion
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", 
-            messages=[
+            model="gpt-3.5-turbo",  # Use gpt-3.5-turbo for chat-based models
+            messages=[ 
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=1500
         )
+
         report = response['choices'][0]['message']['content'].strip()
         return report
     except Exception as e:
         st.error(f"보고서 생성 중 오류 발생: {e}")
         return "보고서 생성 실패."
 
-# Function to suggest rest times
+# Function to suggest rest times based on the schedule
 def suggest_rest_time(schedule):
-    busy_hours = sum([item['duration'] for item in schedule if item['type'] == 'work'])
+    busy_hours = sum([item['duration'] for item in schedule if item['type'] == '업무'])
     if busy_hours > 6:
         return "오늘은 바쁜 일정입니다! 1-2시간마다 짧은 휴식을 고려하세요."
     else:
@@ -99,10 +103,24 @@ with st.form("schedule_form"):
         st.session_state.schedule.append(task)
         st.success(f"{task_name}이(가) {task_date} {task_time}에 추가되었습니다.")
 
-# Display schedule
+# Display schedule with delete option
 st.subheader("당신의 일정")
 schedule_df = pd.DataFrame(st.session_state.schedule)
-st.table(schedule_df)
+schedule_df.index = schedule_df.index + 1  # Start index from 1 instead of 0
+
+for i, row in schedule_df.iterrows():
+    col1, col2, col3 = st.columns([5, 2, 1])
+    col1.write(f"{row['date']} {row['time']} - {row['name']} ({row['type']}, {row['duration']}분)")
+
+    # Generate a unique key for each delete button
+    delete_key = f"delete_{row['name']}_{row['date']}_{row['time']}"
+
+    col2.write("삭제")
+    if col2.button("삭제", key=delete_key):
+        # Find the task in the list and remove it
+        task_to_remove = next(task for task in st.session_state.schedule if task['name'] == row['name'] and task['date'] == row['date'] and task['time'] == row['time'])
+        st.session_state.schedule.remove(task_to_remove)
+        st.rerun()  # Corrected line, use st.rerun() instead of st.experimental_rerun()
 
 # Schedule analysis and optimization
 if st.button("일정 분석 및 최적화"):
@@ -163,6 +181,9 @@ if theme_color == "다크":
                 background-color: #333;
                 color: white;
             }
+            .css-1v3fvcr {
+                background-color: #444;
+            }
         </style>
         """, unsafe_allow_html=True)
 else:
@@ -172,9 +193,13 @@ else:
                 background-color: white;
                 color: black;
             }
+            .css-1v3fvcr {
+                background-color: #f5f5f5;
+            }
         </style>
         """, unsafe_allow_html=True)
 
 # Show the current schedule
 st.subheader("현재 일정:")
 st.write(st.session_state.schedule)
+
